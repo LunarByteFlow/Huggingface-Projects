@@ -4,6 +4,9 @@ from transformers import pipeline
 import markdown
 import re
 import streamlit as st
+from transformers import AutoModelForSeq2SeqLM
+
+model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
 # def extract_text_pdf(pdf_path):
 #   with open(pdf_path,'rb') as pdf_file:
 #     pdf_reader = PyPDF2.PdfReader(pdf_file)
@@ -21,7 +24,7 @@ def clean_text(text):
 # text = extract_text_pdf(pdf_path)
 # cleaned_text = clean_text(text)
 # print(f"The text after cleaning: {cleaned_text}")
-summarizer = pipeline('summarization',model="facebook/bart-large-cnn")
+summarizer = pipeline('summarization',model=model)
 # ARTICLE = cleaned_text
 # print(summarizer(ARTICLE,max_length = 130,min_length = 30,do_sample = False))
 # html = markdown.markdown(ARTICLE)
