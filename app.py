@@ -1,16 +1,16 @@
-import PyPDF2
-from PyPDF2 import PdfReader
+# import PyPDF2
+# from PyPDF2 import PdfReader
 from transformers import pipeline
 import markdown
 import re
 import streamlit as st
-def extract_text_pdf(pdf_path):
-  with open(pdf_path,'rb') as pdf_file:
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in pdf_reader.pages:
-      text +=page.extract_text()
-    return text
+# def extract_text_pdf(pdf_path):
+#   with open(pdf_path,'rb') as pdf_file:
+#     pdf_reader = PyPDF2.PdfReader(pdf_file)
+#     text = ""
+#     for page in pdf_reader.pages:
+#       text +=page.extract_text()
+#     return text
 def clean_text(text):
   cleaned_text = re.sub(r"(\*|\**|\n|\r|\[|\]|\\|\/|\|)", "", text)
   cleaned_text = re.sub(r"(\s+\n\s+)", "\n", cleaned_text)
