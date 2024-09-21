@@ -1,5 +1,5 @@
-# import PyPDF2
-# from PyPDF2 import PdfReader
+import PyPDF2
+from PyPDF2 import PdfReader
 from transformers import pipeline
 import markdown
 import re
