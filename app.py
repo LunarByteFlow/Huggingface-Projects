@@ -6,7 +6,7 @@ import re
 import streamlit as st
 from transformers import AutoModelForSeq2SeqLM
 
-model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
+# model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
 # def extract_text_pdf(pdf_path):
 #   with open(pdf_path,'rb') as pdf_file:
 #     pdf_reader = PyPDF2.PdfReader(pdf_file)
