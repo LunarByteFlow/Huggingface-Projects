@@ -24,7 +24,7 @@ def clean_text(text):
 # text = extract_text_pdf(pdf_path)
 # cleaned_text = clean_text(text)
 # print(f"The text after cleaning: {cleaned_text}")
-summarizer = pipeline('summarization',model=model)
+summarizer = pipeline('summarization',model="facebook/bart-large-cnn")
 # ARTICLE = cleaned_text
 # print(summarizer(ARTICLE,max_length = 130,min_length = 30,do_sample = False))
 # html = markdown.markdown(ARTICLE)
