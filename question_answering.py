@@ -65,7 +65,7 @@ if user_input:
     st.session_state['messages'].append({"role": "assistant", "content": assistant_response})
     
     # Refresh to show updated conversation
-    st.experimental_get_query_params(scroll_to_bottom="true")
+    st.experimental_get_query_params()
 
 # Auto-scroll to bottom on load
 # st.experimental_set_query_params(scroll_to_bottom="true")
