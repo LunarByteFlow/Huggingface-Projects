@@ -1,68 +1,75 @@
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer,pipeline
 import streamlit as st
-torch.manual_seed(0)
+from huggingface_hub import InferenceClient
+
+# Hugging Face Inference API Client
+client = InferenceClient(api_key="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")
+
 st.write("Hello World")
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = AutoModelForCausalLM.from_pretrained(
-    "microsoft/Phi-3.5-mini-instruct", 
-    device_map = device,
-    torch_dtype = "auto",
-    trust_remote_code = True,
-)
-print(torch.cuda.is_available())  # Should return True if CUDA is enabled
-tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
 
-# messages = [
-#     {"role": "system", "content": "You are a helpful AI assistant."},
-#     {"role": "user", "content": "Can you provide ways to eat combinations of bananas and dragonfruits?"},
-#     {"role": "assistant", "content": "Sure! Here are some ways to eat bananas and dragonfruits together: 1. Banana and dragonfruit smoothie: Blend bananas and dragonfruits together with some milk and honey. 2. Banana and dragonfruit salad: Mix sliced bananas and dragonfruits together with some lemon juice and honey."},
-#     {"role": "user", "content": "What about solving an 2x + 3 = 7 equation?"},
-# ]
-messages = [
-    {"role": "system", "content": "You are a helpful AI assistant."},
-    # {"role": "user", "content": "Can you provide ways to eat combinations of bananas and dragonfruits?"},
-    {"role": "assistant", "content": "Sure! Here are some ways to eat bananas and dragonfruits together: 1. Banana and dragonfruit smoothie: Blend bananas and dragonfruits together with some milk and honey. 2. Banana and dragonfruit salad: Mix sliced bananas and dragonfruits together with some lemon juice and honey."},
-    {"role": "user", "content": "What about solving an 2x + 3 = 7 equation?"},
-]
-
+# Initialize the conversation history if not already present
 if 'messages' not in st.session_state:
     st.session_state['messages'] = [
-        {"role":"system","content":"You are a helpfull AI assistant."}
+        {"role": "system", "content": "You are a helpful AI assistant."}
     ]
 
-# Funtion to generate AI response
-def generated_response():
+# Function to generate AI response using Hugging Face Inference API
+def generate_response():
+
+    # Simple greeting response logic
+    if user_input.lower() in ["hello", "hi", "hey"]:
+        return "Hello! How can I assist you today?"
+        
+    # Format the conversation history as a prompt
     formatted_prompt = ""
     for message in st.session_state['messages']:
         formatted_prompt += f"{message['role']}: {message['content']}\n"
 
-    pipe = pipeline("text-generation",model=model, tokenizer = tokenizer)
+    # API call to Hugging Face Inference endpoint for text generation
+    response = client.text_generation(
+        model="microsoft/Phi-3.5-mini-instruct",
+        prompt=formatted_prompt,
+        max_new_tokens= 1500,
+        temperature= 0.1,
+        do_sample= False,
+        # parameters={
+        #     "max_new_tokens": 500,
+        #     "temperature": 0.0,
+        #     "do_sample": False,
+        # }
+    )
 
-    generation_args = {
-    "max_new_tokens":500,
-    "return_full_text":False,
-    "temperature":0.0,
-    "do_sample":False,
-    }
+    # Return the generated text from the API response
+    st.write(response)
 
-    output = pipe(formatted_prompt,**generation_args)
-
-    return output[0]['generated_text']
-
+    # Check if response is a dictionary and contains 'generated_text'
+    if isinstance(response, dict) and 'generated_text' in response:
+        return response['generated_text']
+    else:
+        return "Error: Unexpected response format."
+    # return response['generated_text']
 
 # Display conversation history
 for message in st.session_state['messages']:
     st.write(f"**{message['role'].capitalize()}**: {message['content']}")
 
 # User input
-user_input = st.text_input("You:")
+user_input = st.text_input("You:",key="user_input")
 if user_input:
     # Append user's input to the conversation history
     st.session_state['messages'].append({"role": "user", "content": user_input})
     
-    # Generate AI response
+    # Generate AI response using Hugging Face Inference API
     assistant_response = generate_response()
+    
+    # Append assistant's response to the conversation history
+    st.session_state['messages'].append({"role": "assistant", "content": assistant_response})
+    
+    # Refresh to show updated conversation
+    st.experimental_get_query_params(scroll_to_bottom="true")
+
+# Auto-scroll to bottom on load
+# st.experimental_set_query_params(scroll_to_bottom="true")
+
     
     # Append assistant's response to the conversation history
     st.session_state['messages'].append({"role": "assistant", "content": assistant_response})
