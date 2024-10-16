@@ -4,7 +4,7 @@ from huggingface_hub import InferenceClient
 # Hugging Face Inference API Client
 client = InferenceClient(api_key="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")
 
-st.write("Your Personal AI Chatbot: ")
+st.title("Your Personal AI Chatbot: ")
 
 # Initialize the conversation history if not already present
 if 'messages' not in st.session_state:
