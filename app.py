@@ -82,38 +82,40 @@
 import streamlit as st
 import PyPDF2
 import re
+import requests
+import faiss
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
-import faiss
-import requests
 
-# Hugging Face API config
-API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-headers = {"Authorization": "Bearer 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"}
+# ------------------ Hugging Face API Config ------------------ #
+MODEL_MAP = {
+    "Formal Summary": "facebook/bart-large-cnn",
+    "Concise": "sshleifer/distilbart-cnn-12-6",
+    "Conversational": "mistralai/Mixtral-8x7B-Instruct-v0.1"  # Use one you have access to
+}
 
-# PDF text extraction
+HF_TOKEN = "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"
+
+# ------------------ Session Initialization ------------------ #
+if "vector_index" not in st.session_state:
+    st.session_state.vector_index = None
+    st.session_state.chunks = []
+    st.session_state.embed_model = None
+
+# ------------------ Utility Functions ------------------ #
 def extract_text_from_pdf(file):
     pdf_reader = PyPDF2.PdfReader(file)
-    text = ""
-    for page in pdf_reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text
-    return text
+    return "".join(page.extract_text() or "" for page in pdf_reader.pages)
 
-# Clean text
 def clean_text(text):
-    cleaned_text = re.sub(r"(\*|\**|\n|\r|\[|\]|\\|\/|\|)", "", text)
-    cleaned_text = re.sub(r"(\s+\n\s+)", "\n", cleaned_text)
-    return cleaned_text
+    text = re.sub(r"(\*|\**|\n|\r|\[|\]|\\|\/|\|)", " ", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
 
-# Chunking
 @st.cache_data
 def chunk_text(text):
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     return splitter.split_text(text)
 
-# Embedding & vector index
 @st.cache_resource
 def create_vector_index(chunks):
     model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -122,46 +124,62 @@ def create_vector_index(chunks):
     index.add(embeddings)
     return index, model
 
-# Retrieve top-k chunks
 def retrieve_chunks(query, index, chunks, model, k=3):
     query_vec = model.encode([query])
     D, I = index.search(query_vec, k)
     return [chunks[i] for i in I[0]]
 
-# Call Hugging Face summarizer
-def query_huggingface_api(text):
-    payload = {"inputs": text}
+def query_huggingface_api(prompt, model_id):
+    API_URL = f"https://api-inference.huggingface.co/models/{model_id}"
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    payload = {"inputs": prompt}
     response = requests.post(API_URL, headers=headers, json=payload)
     if response.status_code == 200:
         result = response.json()
-        return result[0].get("summary_text", "No summary generated.")
-    return "Failed to summarize."
+        if isinstance(result, list) and "summary_text" in result[0]:
+            return result[0]["summary_text"]
+        elif isinstance(result, list) and "generated_text" in result[0]:
+            return result[0]["generated_text"]
+    return "⚠️ Failed to generate a response."
 
-# Streamlit App
-def main():
-    st.title("RAG: Chat with Your PDF")
-    uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
+# ------------------ Streamlit App ------------------ #
+st.title("📚 RAG Chat: Ask Questions from Your PDF")
+st.markdown("Upload a PDF and ask questions interactively. Choose the tone of the response!")
 
-    if uploaded_file:
-        raw_text = extract_text_from_pdf(uploaded_file)
-        cleaned = clean_text(raw_text)
-        chunks = chunk_text(cleaned)
+uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
 
-        st.success("PDF processed and chunked.")
-        query = st.text_input("Ask a question about your PDF:")
+if uploaded_file:
+    raw_text = extract_text_from_pdf(uploaded_file)
+    cleaned = clean_text(raw_text)
+    chunks = chunk_text(cleaned)
+    index, embed_model = create_vector_index(chunks)
 
-        if query:
-            index, embed_model = create_vector_index(chunks)
-            top_chunks = retrieve_chunks(query, index, chunks, embed_model)
+    # Store in session
+    st.session_state.vector_index = index
+    st.session_state.chunks = chunks
+    st.session_state.embed_model = embed_model
 
-            context = "\n".join(top_chunks)
-            st.markdown("**Relevant Context:**")
+    st.success("✅ PDF processed. You can now ask questions.")
+
+# Q&A Section
+if st.session_state.vector_index:
+    query = st.text_input("💬 Ask a question about your PDF:")
+    tone = st.selectbox("🗣️ Choose response style:", ["Formal Summary", "Concise", "Conversational"])
+
+    if query:
+        top_chunks = retrieve_chunks(query, st.session_state.vector_index, st.session_state.chunks, st.session_state.embed_model)
+        context = "\n".join(top_chunks)
+
+        with st.expander("🔍 Retrieved Context (click to view)"):
             st.write(context)
 
-            st.markdown("---")
-            st.markdown("**Answer (Summarized):**")
-            summary = query_huggingface_api(context)
-            st.write(summary)
+        st.markdown("---")
+        st.markdown("### 🤖 Answer")
+        prompt = f"Question: {query}\nContext: {context}\nAnswer:"
+        model_id = MODEL_MAP.get(tone, "facebook/bart-large-cnn")
+        answer = query_huggingface_api(prompt, model_id)
+        st.write(answer)
 
 if __name__ == "__main__":
     main()
+
