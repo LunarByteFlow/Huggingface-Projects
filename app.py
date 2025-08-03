@@ -180,6 +180,7 @@ if st.session_state.vector_index:
         answer = query_huggingface_api(prompt, model_id)
         st.write(answer)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
+
 
