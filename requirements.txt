@@ -3,3 +3,9 @@ streamlit
 transformers
 markdown
 torch
+sentence-transformers
+faiss-cpu
+langchain
+
+
+
